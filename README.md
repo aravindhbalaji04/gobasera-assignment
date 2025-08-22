@@ -401,5 +401,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Playwright** for the E2E testing framework
 
 ---
-
-**Made with ❤️ by the Assignment Team**
