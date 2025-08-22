@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: assignment-postgres
+    environment:
+      POSTGRES_DB: assignment_db
+      POSTGRES_USER: assignment_user
+      POSTGRES_PASSWORD: assignment_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - assignment-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: assignment-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - assignment-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: assignment-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - assignment-network
+
+  createbuckets:
+    image: minio/mc:latest
+    container_name: assignment-createbuckets
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10 &&
+      mc alias set myminio http://minio:9000 minioadmin minioadmin123 &&
+      mc mb myminio/default-bucket --ignore-existing &&
+      mc mb myminio/documents --ignore-existing &&
+      mc mb myminio/backups --ignore-existing &&
+      mc policy set public myminio/default-bucket &&
+      mc policy set public myminio/documents &&
+      mc policy set public myminio/backups &&
+      echo '✅ MinIO buckets created successfully';
+      "
+    networks:
+      - assignment-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  assignment-network:
+    driver: bridge
